@@ -7,7 +7,7 @@ services:
     name: product-intelligence
     runtime: python
     plan: free
-    region: singapore
+    region: oregon
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
@@ -28,4 +28,4 @@ services:
 databases:
   - name: product-intelligence-db
     plan: free
-    region: singapore
+    region: oregon
