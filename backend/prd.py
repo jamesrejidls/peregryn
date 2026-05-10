@@ -59,8 +59,22 @@ def create_prd_from_insight(
     if not dataset:
         raise HTTPException(status_code=404, detail="Insight not found")
 
-    # Pull supporting quotes from cited feedback items
-    citation_ids = insight.citations or []
+    # Pull supporting quotes from cited feedback items.
+    # Old insights (created before the citation parser fix) may have strings like "ID 1" stored;
+    # parse defensively so re-running PRDs on legacy data works.
+    raw_citations = insight.citations or []
+    citation_ids: List[int] = []
+    for raw in raw_citations:
+        if isinstance(raw, int):
+            citation_ids.append(raw)
+        elif isinstance(raw, str):
+            s = raw.strip()
+            if s.upper().startswith("ID "):
+                s = s[3:].strip()
+            try:
+                citation_ids.append(int(s))
+            except (TypeError, ValueError):
+                continue
     quotes: List[str] = []
     if citation_ids:
         items = db.query(FeedbackItem).filter(FeedbackItem.id.in_(citation_ids)).all()

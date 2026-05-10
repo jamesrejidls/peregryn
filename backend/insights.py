@@ -52,6 +52,31 @@ def _build_citation_lookup(items: List[FeedbackItem]) -> Dict[int, FeedbackItem]
     return {it.id: it for it in items}
 
 
+def _parse_citation_ids(raw_ids) -> List[int]:
+    """
+    Defensively parse citation IDs from the LLM response into a clean list of ints.
+    The LLM sometimes returns "ID 19" (with the prefix) or "19" (string) instead of 19.
+    SQLite was forgiving about this; Postgres is not. So we normalize at the boundary.
+    """
+    if not raw_ids:
+        return []
+    out = []
+    for raw in raw_ids:
+        if isinstance(raw, int):
+            out.append(raw)
+            continue
+        if isinstance(raw, str):
+            # Strip "ID " prefix if present, then any whitespace, then convert.
+            s = raw.strip()
+            if s.upper().startswith("ID "):
+                s = s[3:].strip()
+            try:
+                out.append(int(s))
+            except (TypeError, ValueError):
+                continue
+    return out
+
+
 def _hydrate_citations(citation_ids: List[int], lookup: Dict[int, FeedbackItem]) -> List[CitationItem]:
     out = []
     for cid in citation_ids or []:
@@ -103,7 +128,7 @@ def run_analysis(dataset_id: int, current_user: User = Depends(get_current_user)
             affected_users=str(pp.get("affected_users", "")).strip()[:500],
             emotional_tone=str(pp.get("emotional_tone", "")).strip()[:255],
             recommendation=str(pp.get("recommendation", "")).strip(),
-            citations=pp.get("citations") or [],
+            citations=_parse_citation_ids(pp.get("citations")),
             sentiment_summary=sentiment,
             trending_topics=trending,
         )

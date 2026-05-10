@@ -57,11 +57,19 @@ def ask(req: QueryRequest, current_user: User = Depends(get_current_user), db: S
     lookup = {it.id: it for it in items}
     citations = []
     for cid in result.get("citations") or []:
-        try:
-            cid_int = int(cid)
-        except (TypeError, ValueError):
-            continue
-        if cid_int in lookup:
+        # Handle int, "19", or "ID 19" defensively.
+        cid_int = None
+        if isinstance(cid, int):
+            cid_int = cid
+        elif isinstance(cid, str):
+            s = cid.strip()
+            if s.upper().startswith("ID "):
+                s = s[3:].strip()
+            try:
+                cid_int = int(s)
+            except (TypeError, ValueError):
+                continue
+        if cid_int is not None and cid_int in lookup:
             it = lookup[cid_int]
             citations.append(CitationItem(id=it.id, content=it.content, user_label=it.user_label))
 

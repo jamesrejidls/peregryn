@@ -111,6 +111,7 @@ Return a JSON object with this exact shape:
 Rules:
 - "positive" + "neutral" + "negative" must sum to 100.
 - Use only IDs that actually appear in the feedback below.
+- Citations must be raw integers like 1, 9, 19 — NEVER strings like "ID 1" or "1".
 - If there are fewer than 5 distinct pain points, return fewer.
 - Trending topics are short noun phrases (2-4 words), most-mentioned first.
 
@@ -166,7 +167,8 @@ Return JSON of this shape:
   "citations": [<list of feedback IDs supporting your answer>]
 }}
 
-If the feedback doesn't address the question, set answer accordingly and citations to []."""
+If the feedback doesn't address the question, set answer accordingly and citations to [].
+Citations must be raw integers like 1, 9, 19 — NEVER strings like "ID 1" or "1"."""
 
 
 def answer_query(items: List[Dict[str, Any]], question: str) -> Dict[str, Any]:

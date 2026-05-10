@@ -1,6 +1,6 @@
 """
 Database models and session management.
-Uses SQLite by default for zero-setup; switch DATABASE_URL to Postgres for production.
+Uses SQLite for local development; switch DATABASE_URL to Postgres for production.
 """
 import os
 import json
@@ -15,9 +15,18 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 
-# SQLite needs this connect arg; Postgres doesn't
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, connect_args=connect_args)
+# Render and Heroku give a "postgres://..." URL, but SQLAlchemy 2.x requires "postgresql://...".
+# Normalize the prefix so either works.
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+# SQLite needs check_same_thread=False; Postgres doesn't.
+# For Postgres, enable pre-ping so dropped connections are silently retried instead of erroring.
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+else:
+    engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
