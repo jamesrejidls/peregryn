@@ -273,7 +273,7 @@ This is built as a hackathon-grade MVP with production-friendly seams:
 - **Add background workers** (Celery/RQ) for analysis runs that exceed 30s
 - **Deploy:** backend → Railway / Fly / Render; frontend is already served by FastAPI so you just need one container
 
-Note: SQLite does not work on ephemeral cloud platforms like Railway because the local filesystem gets wiped on every redeploy. Switch to Postgres before deploying.
+Note: SQLite does not work on ephemeral cloud platforms like Render/Railway because the local filesystem gets wiped on every redeploy. Switch to Postgres before deploying.
 
 ---
 
