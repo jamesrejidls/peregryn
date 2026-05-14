@@ -15,7 +15,7 @@ pip install --upgrade pip >nul
 pip install -r requirements.txt
 
 if not exist ".env" (
-  echo Creating .env from .env.example - edit it to add your GEMINI_API_KEY.
+  echo Creating .env from .env.example - edit it to add your GEMINI_API_KEY and CLERK keys.
   copy .env.example .env
 )
 

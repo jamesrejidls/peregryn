@@ -24,7 +24,7 @@ pip install -q --upgrade pip
 pip install -q -r requirements.txt
 
 if [ ! -f ".env" ]; then
-  echo "▶ Creating .env from .env.example — edit it to add your GEMINI_API_KEY."
+  echo "▶ Creating .env from .env.example — edit it to add your GEMINI_API_KEY and CLERK keys."
   cp .env.example .env
 fi
 

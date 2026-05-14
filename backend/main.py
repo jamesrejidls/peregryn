@@ -54,6 +54,18 @@ def health():
     return {"ok": True, "llm_configured": bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))}
 
 
+@app.get("/api/config")
+def config():
+    """Expose non-sensitive config to the frontend (publishable Clerk key, etc).
+    The publishable key is safe to expose — it's designed for browser use.
+    The secret key stays server-side only.
+    """
+    return {
+        "clerk_publishable_key": os.getenv("CLERK_PUBLISHABLE_KEY", ""),
+        "clerk_enabled": bool(os.getenv("CLERK_PUBLISHABLE_KEY")),
+    }
+
+
 # Register API routers under /api so they don't collide with the SPA
 app.include_router(auth_router, prefix="/api")
 app.include_router(intake_router, prefix="/api")

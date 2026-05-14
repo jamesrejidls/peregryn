@@ -32,10 +32,14 @@ Base = declarative_base()
 
 
 class User(Base):
+    """
+    A user, identified by Clerk's user ID (e.g., 'user_2abc123xyz').
+    We store minimal info — Clerk is the source of truth for email, name, etc.
+    Users are created on first authenticated request (see auth.get_current_user).
+    """
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String(255), unique=True, index=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    id = Column(String(64), primary_key=True, index=True)  # Clerk user ID
+    email = Column(String(255), index=True, nullable=True)  # cached from Clerk for convenience
     created_at = Column(DateTime, default=datetime.utcnow)
 
     datasets = relationship("Dataset", back_populates="owner", cascade="all, delete-orphan")
@@ -44,7 +48,7 @@ class User(Base):
 class Dataset(Base):
     __tablename__ = "datasets"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(String(64), ForeignKey("users.id"), nullable=False)
     name = Column(String(255), nullable=False)
     source_type = Column(String(20), nullable=False)  # 'csv' or 'text'
     row_count = Column(Integer, default=0)

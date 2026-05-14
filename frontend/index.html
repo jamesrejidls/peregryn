@@ -6,6 +6,12 @@
 <title>Product Intelligence</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Clerk SDK (loaded with publishable key from /api/config) -->
+<script>
+  // Placeholder — the publishable key is fetched from the backend at runtime so we don't hardcode it.
+  // The actual <script> tag for Clerk is injected by initClerk() below once we have the key.
+  window.__CLERK_LOADED__ = false;
+</script>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
   .scroll-thin::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -27,32 +33,23 @@
 
 <!-- ============================ AUTH SCREEN ============================ -->
 <div id="auth-screen" class="min-h-screen flex items-center justify-center px-4">
-  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl border border-slate-200 p-8 fade-in">
-    <div class="flex items-center gap-3 mb-6">
+  <div class="w-full max-w-md fade-in">
+    <div class="flex items-center justify-center gap-3 mb-6">
       <div class="w-10 h-10 rounded-xl pp-rank flex items-center justify-center text-white font-bold">PI</div>
       <div>
         <h1 class="text-xl font-semibold">Product Intelligence</h1>
         <p class="text-sm text-slate-500">Customer signals → product decisions</p>
       </div>
     </div>
-    <div class="flex gap-1 mb-5 bg-slate-100 p-1 rounded-lg">
-      <button id="tab-login" class="flex-1 py-2 rounded-md text-sm font-medium bg-white shadow-sm">Sign in</button>
-      <button id="tab-register" class="flex-1 py-2 rounded-md text-sm font-medium text-slate-600">Create account</button>
+    <!-- Clerk's SignIn component mounts here -->
+    <div id="clerk-mount"></div>
+    <!-- Fallback message shown if Clerk fails to load -->
+    <div id="clerk-fallback" class="hidden bg-white rounded-2xl shadow-xl border border-slate-200 p-8 text-center">
+      <p class="text-rose-600 font-medium">Authentication is unavailable.</p>
+      <p class="text-sm text-slate-500 mt-2">
+        The sign-in service couldn't load. Please refresh the page or contact support.
+      </p>
     </div>
-    <form id="auth-form" class="space-y-4">
-      <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-        <input id="auth-email" type="email" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="you@company.com" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
-        <input id="auth-password" type="password" required minlength="6" class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="At least 6 characters" />
-      </div>
-      <button id="auth-submit" type="submit" class="w-full py-2.5 rounded-lg pp-rank text-white font-medium hover:opacity-90 transition flex items-center justify-center gap-2">
-        <span id="auth-submit-text">Sign in</span>
-      </button>
-      <p id="auth-error" class="text-sm text-rose-600 hidden"></p>
-    </form>
   </div>
 </div>
 
@@ -280,13 +277,23 @@ The mobile app crashes when uploading photos."></textarea>
 // ============================================================
 const API = {
   base: '/api',
-  token() { return localStorage.getItem('token'); },
-  setToken(t) { localStorage.setItem('token', t); },
-  clearToken() { localStorage.removeItem('token'); },
+  // Token retrieval is async now — we fetch a fresh Clerk session token before every request.
+  // This handles Clerk's automatic refresh seamlessly.
+  async getToken() {
+    if (window.Clerk && window.Clerk.session) {
+      try {
+        return await window.Clerk.session.getToken();
+      } catch (e) {
+        console.warn('Failed to get Clerk token:', e);
+        return null;
+      }
+    }
+    return null;
+  },
 
   async req(method, path, body, isForm = false) {
     const headers = {};
-    const token = this.token();
+    const token = await this.getToken();
     if (token) headers['Authorization'] = 'Bearer ' + token;
     if (!isForm && body !== undefined) headers['Content-Type'] = 'application/json';
 
@@ -296,7 +303,6 @@ const API = {
       body: body === undefined ? undefined : (isForm ? body : JSON.stringify(body)),
     });
     if (res.status === 401) {
-      this.clearToken();
       showAuth();
       throw new Error('Not authenticated');
     }
@@ -332,6 +338,12 @@ const state = {
 function showAuth() {
   $('#app-shell').classList.add('hidden');
   $('#auth-screen').classList.remove('hidden');
+  // Mount Clerk's SignIn each time the auth screen is shown (after a tick for DOM).
+  setTimeout(() => {
+    if (window.Clerk) {
+      mountClerkSignIn();
+    }
+  }, 0);
 }
 function showApp() {
   $('#auth-screen').classList.add('hidden');
@@ -380,45 +392,44 @@ function setButtonLoading(btn, loading, idleText) {
 }
 
 // ============================================================
-//   AUTH SCREEN
+//   AUTH SCREEN (Clerk-based)
 // ============================================================
-let authMode = 'login';
-$('#tab-login').addEventListener('click', () => { authMode = 'login'; updateAuthTabs(); });
-$('#tab-register').addEventListener('click', () => { authMode = 'register'; updateAuthTabs(); });
-function updateAuthTabs() {
-  const isLogin = authMode === 'login';
-  $('#tab-login').className = `flex-1 py-2 rounded-md text-sm font-medium ${isLogin ? 'bg-white shadow-sm' : 'text-slate-600'}`;
-  $('#tab-register').className = `flex-1 py-2 rounded-md text-sm font-medium ${!isLogin ? 'bg-white shadow-sm' : 'text-slate-600'}`;
-  $('#auth-submit-text').textContent = isLogin ? 'Sign in' : 'Create account';
-}
-$('#auth-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = $('#auth-email').value.trim();
-  const password = $('#auth-password').value;
-  const errEl = $('#auth-error');
-  errEl.classList.add('hidden');
-  const submitBtn = $('#auth-submit');
-  submitBtn.disabled = true;
-  try {
-    const path = authMode === 'login' ? '/auth/login' : '/auth/register';
-    const data = await API.post(path, { email, password });
-    API.setToken(data.access_token);
-    state.user = { email: data.email };
-    await bootApp();
-  } catch (err) {
-    errEl.textContent = err.message;
-    errEl.classList.remove('hidden');
-  } finally {
-    submitBtn.disabled = false;
+// The old email/password form is gone — Clerk's SignIn component handles
+// everything. We just mount it and listen for sign-in events.
+
+function mountClerkSignIn() {
+  if (!window.Clerk) {
+    $('#clerk-mount').classList.add('hidden');
+    $('#clerk-fallback').classList.remove('hidden');
+    return;
   }
-});
+  try {
+    window.Clerk.mountSignIn(document.getElementById('clerk-mount'), {
+      // Defaults are fine — Clerk picks up sign-in methods from your dashboard config.
+    });
+  } catch (e) {
+    console.error('Failed to mount Clerk SignIn:', e);
+    $('#clerk-mount').classList.add('hidden');
+    $('#clerk-fallback').classList.remove('hidden');
+  }
+}
+
+function unmountClerkSignIn() {
+  if (window.Clerk) {
+    try {
+      window.Clerk.unmountSignIn(document.getElementById('clerk-mount'));
+    } catch (e) { /* already unmounted, ignore */ }
+  }
+}
 
 // ============================================================
 //   APP BOOT
 // ============================================================
-$('#logout-btn').addEventListener('click', () => {
-  API.clearToken();
+$('#logout-btn').addEventListener('click', async () => {
   state.user = null;
+  if (window.Clerk) {
+    await window.Clerk.signOut();
+  }
   showAuth();
 });
 
@@ -1115,7 +1126,8 @@ function downloadTasksTxt(tasks) {
 }
 
 async function downloadAuth(path) {
-  const res = await fetch(path, { headers: { 'Authorization': 'Bearer ' + API.token() } });
+  const token = await API.getToken();
+  const res = await fetch(path, { headers: { 'Authorization': 'Bearer ' + (token || '') } });
   if (!res.ok) { toast('Download failed', 'error'); return; }
   const cd = res.headers.get('content-disposition') || '';
   const m = cd.match(/filename="?([^"]+)"?/);
@@ -1128,10 +1140,93 @@ async function downloadAuth(path) {
 }
 
 // ============================================================
-//   ENTRYPOINT
+//   CLERK INITIALIZATION + ENTRYPOINT
 // ============================================================
+async function initClerk() {
+  // Fetch the publishable key from backend.
+  let cfg;
+  try {
+    const res = await fetch('/api/config');
+    cfg = await res.json();
+  } catch (e) {
+    console.error('Could not fetch /api/config:', e);
+    return false;
+  }
+
+  if (!cfg.clerk_enabled || !cfg.clerk_publishable_key) {
+    console.error('Clerk is not configured. Set CLERK_PUBLISHABLE_KEY in .env and restart.');
+    return false;
+  }
+
+  const pk = cfg.clerk_publishable_key;
+  await new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.async = true;
+    s.crossOrigin = 'anonymous';
+    s.setAttribute('data-clerk-publishable-key', pk);
+    s.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Failed to load Clerk SDK'));
+    document.head.appendChild(s);
+  });
+
+  if (!window.Clerk) {
+    console.error('Clerk script loaded but window.Clerk is missing.');
+    return false;
+  }
+  try {
+    await window.Clerk.load();
+    console.info('✅ Clerk loaded.');
+    return true;
+  } catch (e) {
+    console.error('Clerk.load() failed:', e);
+    return false;
+  }
+}
+
+// Helper to cache the user's email in our DB after sign-in.
+async function syncUserEmail() {
+  try {
+    if (!window.Clerk || !window.Clerk.user) return;
+    const email = window.Clerk.user.primaryEmailAddress?.emailAddress;
+    if (!email) return;
+    await API.post('/auth/me', { email });
+    state.user = { email };
+  } catch (e) {
+    console.warn('Failed to sync user email:', e);
+  }
+}
+
 (async function init() {
-  if (API.token()) {
+  const ok = await initClerk();
+  if (!ok) {
+    // Fallback UI is already in the HTML; just show it.
+    showAuth();
+    $('#clerk-mount').classList.add('hidden');
+    $('#clerk-fallback').classList.remove('hidden');
+    return;
+  }
+
+  // Listen for sign-in / sign-out events from Clerk.
+  window.Clerk.addListener(async ({ user }) => {
+    if (user) {
+      // Just signed in — sync email and boot the app.
+      await syncUserEmail();
+      try { await bootApp(); }
+      catch (e) {
+        console.error('bootApp failed:', e);
+        showAuth();
+      }
+    } else {
+      // Signed out
+      state.user = null;
+      showAuth();
+    }
+  });
+
+  // Initial state: are they already signed in?
+  if (window.Clerk.user) {
+    await syncUserEmail();
     try { await bootApp(); }
     catch { showAuth(); }
   } else {

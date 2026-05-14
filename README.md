@@ -2,8 +2,6 @@
 
 > Upload customer feedback. Get the top 5 pain points, a sentiment dashboard, a full PRD, and engineering tickets — all powered by AI.
 
-**🔗 Live demo:** [Open the live app](https://product-intelligence-0mwz.onrender.com)
-
 This is the full implementation of the brief: a single application that turns raw customer voice into structured product intelligence.
 
 ---
@@ -20,7 +18,7 @@ All seven features from the spec, working end-to-end:
 | 4 | **PRD Generator** — one click on an insight produces a full PRD | `backend/prd.py` |
 | 5 | **Insight Dashboard** — pain point cards, sentiment donut, trending topics, voice of customer | `frontend/index.html` |
 | 6 | **Dev Task Generator** — break a PRD into engineering tickets, export as text | `backend/prd.py` |
-| 7 | **Auth + Workspace** — JWT-based signup/login, per-user datasets | `backend/auth.py` |
+| 7 | **Auth + Workspace** — Clerk-based signup/login, per-user datasets | `backend/auth.py` |
 
 Plus PDF and Markdown export of any PRD.
 
@@ -30,9 +28,11 @@ Plus PDF and Markdown export of any PRD.
 
 - **Backend:** FastAPI + SQLAlchemy + SQLite (zero setup) + Google Gemini SDK + ReportLab (PDFs)
 - **Frontend:** Single-page app, vanilla JS, Tailwind via CDN, Chart.js for the sentiment donut
-- **Auth:** JWT (custom, replaces Clerk so you don't need a paid account to run this)
+- **Auth:** [Clerk](https://clerk.com) — managed authentication with email + Google sign-in via Clerk's pre-built UI components
 - **Database:** SQLite by default — switch `DATABASE_URL` in `.env` for Postgres
 - **AI provider:** Google Gemini (free tier — no credit card required)
+
+> Why these choices? Two reasons. First, the spec asked for a working product, and SQLite + a single Python server means you can run this with one command. Second, the AI quality depends on the prompts, not the framework — so the engineering choices that matter live in `backend/llm_client.py`.
 
 ---
 
@@ -40,6 +40,11 @@ Plus PDF and Markdown export of any PRD.
 
 1. **Python 3.10 or newer** — check with `python --version` (Windows) or `python3 --version` (Mac/Linux)
 2. **A Google Gemini API key** — get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). No credit card needed. Free tier is enough to test the app end-to-end.
+3. **A Clerk account** — sign up free at [clerk.com](https://clerk.com), create an application (pick Email + Google as sign-in methods), and copy the Publishable Key and Secret Key from the API Keys page. Free tier covers 50,000 monthly users.
+
+That's it. No Node, no Postgres, no Redis, no Docker.
+
+> **Heads-up on the deployment files in this repo.** You'll see `render.yaml`, `Procfile`, and `runtime.txt` at the project root. These are only used when deploying to Render (see "Going to production" below). They are completely ignored when running locally — you can safely leave them alone, and you don't need a Render account to run the app on your laptop.
 
 ---
 
@@ -100,7 +105,7 @@ Then open http://localhost:8000.
 
 ### 1. Sign up
 
-Open http://localhost:8000. Create an account with any email and password (6+ chars). Everything stays local in `app.db`.
+Open http://localhost:8000. Sign up via Clerk's pre-built component using your email (Clerk emails you a verification code) or Google sign-in. Each user gets their own isolated workspace stored in the local database.
 
 ### 2. Upload data
 
@@ -162,7 +167,7 @@ product-intelligence/
 │   ├── __init__.py
 │   ├── main.py              ← FastAPI app + serves the frontend
 │   ├── database.py          ← SQLAlchemy models (User, Dataset, Insight, PRD, DevTask)
-│   ├── auth.py              ← JWT register/login/me
+│   ├── auth.py              ← Clerk session token verification + auto-provisioning
 │   ├── llm_client.py        ← All AI prompts live here (the heart of the product)
 │   ├── intake.py            ← CSV upload, text paste, cleaning, dedup, preview
 │   ├── insights.py          ← AI Insight Engine endpoints
@@ -182,12 +187,16 @@ product-intelligence/
 
 ## API reference (for the curious)
 
-All endpoints are under `/api`. All except `/api/auth/*` require a Bearer token.
+All endpoints are under `/api`. All except `/api/health` and `/api/config` require a Bearer token (a Clerk session token, supplied by Clerk's frontend SDK).
 
 ### Auth
-- `POST /api/auth/register` — `{email, password}` → `{access_token, email}`
-- `POST /api/auth/login` — `{email, password}` → `{access_token, email}`
-- `GET /api/auth/me` — current user
+Authentication is handled by [Clerk](https://clerk.com). Users sign up and log in via Clerk's pre-built UI components in the frontend. The backend verifies Clerk's session JWTs against Clerk's JWKS endpoint and auto-provisions a User row on first authenticated request.
+- `GET /api/auth/me` — current user (returns `{id, email}`)
+- `POST /api/auth/me` — `{email}` → updates the cached email for the current user
+
+### Public (no auth)
+- `GET /api/health` — health check, returns `{ok, llm_configured}`
+- `GET /api/config` — returns `{clerk_publishable_key, clerk_enabled}` for frontend init
 
 ### Intake
 - `POST /api/intake/upload-csv` — multipart file → preview with `upload_token`
@@ -267,13 +276,27 @@ Check the terminal for errors. Make sure `frontend/index.html` exists. Try openi
 This is built as a hackathon-grade MVP with production-friendly seams:
 
 - **Swap SQLite for Postgres**: change `DATABASE_URL` in `.env` to `postgresql://...`
-- **Swap JWT auth for Clerk or Supabase Auth**: replace the dependencies in routers with the new verifier
-- **Lock down CORS**: edit `allow_origins` in `backend/main.py`
+- **Swap or extend auth**: Clerk is already in place — you can add more sign-in methods (passkeys, Microsoft, etc.) from the Clerk dashboard with zero code changes
+- **Lock down CORS**: set `ALLOWED_ORIGINS` env var (comma-separated origins) in `backend/main.py`
 - **Move uploads to S3 or Supabase Storage**: replace `_PREVIEW_CACHE` in `intake.py` with object storage
 - **Add background workers** (Celery/RQ) for analysis runs that exceed 30s
-- **Deploy:** backend → Railway / Fly / Render; frontend is already served by FastAPI so you just need one container
 
-Note: SQLite does not work on ephemeral cloud platforms like Render/Railway because the local filesystem gets wiped on every redeploy. Switch to Postgres before deploying.
+Note: SQLite does not work on ephemeral cloud platforms like Render because the local filesystem gets wiped on every redeploy. Switch to Postgres before deploying.
+
+### Deploying to Render (one-click)
+
+This repo ships with a `render.yaml` Blueprint for free-tier deployment to Render:
+
+1. Sign up at [render.com](https://render.com) using GitHub.
+2. In the dashboard, click **+ New → Blueprint**.
+3. Connect this repository. Render reads `render.yaml` and provisions both the web service and a free Postgres database.
+4. When prompted, paste your `GEMINI_API_KEY`. Other env vars are auto-configured.
+5. Wait 5–8 minutes for the first build. You'll get a public URL like `https://product-intelligence-xxxx.onrender.com`.
+
+**Notes:**
+- Render's free Postgres expires after 90 days. Either pay for permanent Postgres, recreate the database, or migrate to a permanent free provider (Neon, Supabase).
+- Render's free web tier sleeps after 15 minutes of inactivity. First request after sleep takes 30–60 seconds. Use a free uptime monitor (e.g., UptimeRobot pinging `/api/health` every 5 minutes) to keep it warm.
+- Gemini's free API tier has geographic restrictions. Use the `oregon` or `frankfurt` Render regions, not `singapore` (Gemini API blocks Singapore data centers as of writing).
 
 ---
 
