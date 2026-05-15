@@ -6,8 +6,6 @@
 
 This is the full implementation of the brief: a single application that turns raw customer voice into structured product intelligence.
 
-> The repo and project folder are named `product-intelligence` for historical reasons (it's how the brief was named). The app itself is called **Peregryn**.
-
 ---
 
 ## What's inside
