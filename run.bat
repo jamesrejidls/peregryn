@@ -1,5 +1,5 @@
 @echo off
-REM Launches the Product Intelligence app on Windows.
+REM Launches the Peregryn app on Windows.
 
 cd /d "%~dp0"
 
@@ -21,7 +21,7 @@ if not exist ".env" (
 
 echo.
 echo ============================================================
-echo   Product Intelligence is starting on http://localhost:8000
+echo   Peregryn is starting on http://localhost:8000
 echo ============================================================
 echo.
 

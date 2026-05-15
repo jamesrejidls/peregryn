@@ -1,10 +1,12 @@
-# Product Intelligence
+# Peregryn
 
 > Upload customer feedback. Get the top 5 pain points, a sentiment dashboard, a full PRD, and engineering tickets — all powered by AI.
 
 **🔗 Live demo:** [Open the live app](https://product-intelligence-sxmv.onrender.com)
 
 This is the full implementation of the brief: a single application that turns raw customer voice into structured product intelligence.
+
+> The repo and project folder are named `product-intelligence` for historical reasons (it's how the brief was named). The app itself is called **Peregryn**.
 
 ---
 

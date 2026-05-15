@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launches the Product Intelligence app.
+# Launches the Peregryn app.
 # - Creates a virtualenv on first run
 # - Installs requirements
 # - Copies .env.example to .env if missing
@@ -30,7 +30,7 @@ fi
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
-echo "  Product Intelligence is starting on http://localhost:8000"
+echo "  Peregryn is starting on http://localhost:8000"
 echo "  (Open that URL in your browser to use the app)"
 echo "════════════════════════════════════════════════════════════"
 echo ""

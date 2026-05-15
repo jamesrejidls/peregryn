@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
     # No teardown needed — SQLAlchemy handles connection cleanup.
 
 
-app = FastAPI(title="Product Intelligence", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Peregryn", version="1.0.0", lifespan=lifespan)
 
 # CORS — allow everything by default. Tighten via ALLOWED_ORIGINS env var in production
 # (comma-separated list of origins) once you know your final deployed URL.
