@@ -1255,17 +1255,24 @@ async function syncUserEmail() {
   }
 
   // Listen for sign-in / sign-out events from Clerk.
+  // Clerk also fires this listener on session token refreshes (every ~45 seconds),
+  // so we track whether we've already booted to avoid re-running bootApp() and
+  // snapping the user back to the dashboard mid-session.
+  let booted = false;
   window.Clerk.addListener(async ({ user }) => {
     if (user) {
-      // Just signed in — sync email and boot the app.
+      if (booted) return; // Token refresh — ignore.
+      booted = true;
       await syncUserEmail();
       try { await bootApp(); }
       catch (e) {
         console.error('bootApp failed:', e);
+        booted = false;
         showAuth();
       }
     } else {
       // Signed out
+      booted = false;
       state.user = null;
       showAuth();
     }
@@ -1273,9 +1280,10 @@ async function syncUserEmail() {
 
   // Initial state: are they already signed in?
   if (window.Clerk.user) {
+    booted = true;
     await syncUserEmail();
     try { await bootApp(); }
-    catch { showAuth(); }
+    catch { booted = false; showAuth(); }
   } else {
     showAuth();
   }
