@@ -10,7 +10,7 @@ An application that turns raw customer voice into structured product intelligenc
 
 ## What's inside
 
-All seven features from the spec, working end-to-end:
+7 features, working end-to-end:
 
 | # | Feature | Where it lives |
 |---|---|---|
