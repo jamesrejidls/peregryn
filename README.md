@@ -4,7 +4,7 @@
 
 **🔗 Live demo:** [Open the live app](https://product-intelligence-sxmv.onrender.com)
 
-This is the full implementation of the brief: a single application that turns raw customer voice into structured product intelligence.
+An application that turns raw customer voice into structured product intelligence.
 
 ---
 
