@@ -42,7 +42,7 @@ Plus PDF and Markdown export of any PRD.
 2. **A Google Gemini API key** — get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). No credit card needed. Free tier is enough to test the app end-to-end.
 3. **A Clerk account** — sign up free at [clerk.com](https://clerk.com), create an application (pick Email + Google as sign-in methods), and copy the Publishable Key and Secret Key from the API Keys page. Free tier covers 50,000 monthly users.
 
-> **Heads-up on the deployment files in this repo.** You'll see `render.yaml`, `Procfile`, and `runtime.txt` at the project root. These are only used when deploying to Render. They are completely ignored when running locally — you can safely leave them alone.
+> **Heads-up on the deployment files in this repo.** You'll see `render.yaml`, `Procfile`, and `runtime.txt` at the project root. These are only used when deploying. They are completely ignored when running locally — you can safely leave them alone.
 
 ---
 
