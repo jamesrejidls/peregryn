@@ -4,7 +4,7 @@
 
 services:
   - type: web
-    name: product-intelligence
+    name: peregryn
     runtime: python
     plan: free
     region: oregon
@@ -24,10 +24,10 @@ services:
         sync: false
       - key: DATABASE_URL
         fromDatabase:
-          name: product-intelligence-db
+          name: peregryn-db
           property: connectionString
 
 databases:
-  - name: product-intelligence-db
+  - name: peregryn-db
     plan: free
     region: oregon
