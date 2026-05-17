@@ -2,7 +2,7 @@
 
 > Upload customer feedback. Get the top 5 pain points, a sentiment dashboard, a full PRD, and engineering tickets — all powered by AI.
 
-**🔗 Live demo:** [Open the live app](https://product-intelligence-sxmv.onrender.com)
+**🔗 Live demo:** [Open the live app](https://peregryn.onrender.com)
 
 An application that turns raw customer voice into structured product intelligence.
 
