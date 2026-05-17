@@ -51,7 +51,7 @@ Plus PDF and Markdown export of any PRD.
 ### macOS / Linux
 
 ```bash
-cd product-intelligence
+cd peregryn
 chmod +x run.sh
 ./run.sh
 ```
@@ -61,7 +61,7 @@ chmod +x run.sh
 Double-click `run.bat`, or from a terminal:
 
 ```cmd
-cd product-intelligence
+cd peregryn
 run.bat
 ```
 
@@ -86,7 +86,7 @@ Then restart the server (Ctrl+C, then `./run.sh` or `run.bat` again). Without th
 ## Manual install (if the launchers don't work)
 
 ```bash
-cd product-intelligence
+cd peregryn
 python -m venv .venv
 .venv\Scripts\activate              # on macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
