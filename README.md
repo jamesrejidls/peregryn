@@ -31,7 +31,7 @@ Plus PDF and Markdown export of any PRD.
 - **Backend:** FastAPI + SQLAlchemy + SQLite (zero setup) + Google Gemini SDK + ReportLab (PDFs)
 - **Frontend:** Single-page app, vanilla JS, Tailwind via CDN, Chart.js for the sentiment donut
 - **Auth:** [Clerk](https://clerk.com) — managed authentication with email + Google sign-in via Clerk's pre-built UI components
-- **Database:** SQLite by default — switch `DATABASE_URL` in `.env` for Postgres
+- **Database:** SQLite for local development (zero setup) — the live deployment runs on [Neon](https://neon.tech) Postgres, switchable via `DATABASE_URL` in `.env`
 - **AI provider:** Google Gemini (free tier — no credit card required)
 
 ---
@@ -41,6 +41,7 @@ Plus PDF and Markdown export of any PRD.
 1. **Python 3.10 or newer** — check with `python --version` (Windows) or `python3 --version` (Mac/Linux)
 2. **A Google Gemini API key** — get one free at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). No credit card needed. Free tier is enough to test the app end-to-end.
 3. **A Clerk account** — sign up free at [clerk.com](https://clerk.com), create an application (pick Email + Google as sign-in methods), and copy the Publishable Key and Secret Key from the API Keys page. Free tier covers 50,000 monthly users.
+4. **(Only if deploying your own copy) A Neon account** — sign up free at [neon.tech](https://neon.tech) for a permanent, free Postgres database. Not needed to run the app locally, since it uses SQLite by default.
 
 > **Heads-up on the deployment files in this repo.** You'll see `render.yaml`, `Procfile`, and `runtime.txt` at the project root. These are only used when deploying. They are completely ignored when running locally — you can safely leave them alone.
 
@@ -273,13 +274,15 @@ Check the terminal for errors. Make sure `frontend/index.html` exists. Try openi
 
 This is built as a hackathon-grade MVP with production-friendly seams:
 
-- **Swap SQLite for Postgres**: change `DATABASE_URL` in `.env` to `postgresql://...`
+- **Swap SQLite for Postgres**: change `DATABASE_URL` in `.env` to `postgresql://...`. This live demo runs on [Neon](https://neon.tech)'s free Postgres tier rather than Render's own Postgres add-on — Render's free database auto-deletes 30 days after creation (this project hit that wall once), while Neon's free tier doesn't expire.
 - **Swap or extend auth**: Clerk is already in place — you can add more sign-in methods (passkeys, Microsoft, etc.) from the Clerk dashboard with zero code changes
 - **Lock down CORS**: set `ALLOWED_ORIGINS` env var (comma-separated origins) in `backend/main.py`
 - **Move uploads to S3 or Supabase Storage**: replace `_PREVIEW_CACHE` in `intake.py` with object storage
 - **Add background workers** (Celery/RQ) for analysis runs that exceed 30s
 
 Note: SQLite does not work on ephemeral cloud platforms like Render because the local filesystem gets wiped on every redeploy. Switch to Postgres before deploying.
+
+**This live demo's actual setup:** a single Render web service (configured via `render.yaml`) for the app, with the database hosted separately on Neon. Splitting them this way means the database survives even if the web service is ever recreated, and avoids Render's 30-day free-tier database expiration entirely.
 
 ---
 
